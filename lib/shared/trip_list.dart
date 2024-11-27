@@ -9,12 +9,14 @@ class TripList extends StatefulWidget {
 
 class _TripListState extends State<TripList> {
   List<Widget> _tripTiles = [];
-  final GlobalKey _listKey = GlobalKey();
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  late final Tween<Offset> _offset;
 
   @override
   void initState() {
     super.initState();
-    _addTrips();
+    _offset = Tween<Offset>(begin: Offset(1, 0), end: Offset(0, 0));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _addTrips());
   }
 
   void _addTrips() {
@@ -27,11 +29,36 @@ class _TripListState extends State<TripList> {
     ];
 
     _trips.forEach((Trip trip) {
-      _tripTiles.add(_buildTile(trip));
+      _tripTiles.add(ListItem(trip: trip));
+      _listKey.currentState!.insertItem(_tripTiles.length - 1);
     });
   }
 
-  Widget _buildTile(Trip trip) {
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedList(
+      key: _listKey,
+      initialItemCount: _tripTiles.length,
+      itemBuilder: (context, index, animation) {
+        return SlideTransition(
+          child: _tripTiles[index],
+          position: animation.drive(_offset),
+        );
+      },
+    );
+  }
+}
+
+class ListItem extends StatelessWidget {
+  final Trip trip;
+
+  const ListItem({
+    Key? key,
+    required this.trip,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return ListTile(
       onTap: () {
         Navigator.push(context, MaterialPageRoute(builder: (context) => Details(trip: trip)));
@@ -57,15 +84,5 @@ class _TripListState extends State<TripList> {
       ),
       trailing: Text('\$${trip.price}'),
     );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-        key: _listKey,
-        itemCount: _tripTiles.length,
-        itemBuilder: (context, index) {
-          return _tripTiles[index];
-        });
   }
 }
